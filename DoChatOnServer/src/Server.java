@@ -1,26 +1,36 @@
 //package chatting.application;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.text.StyledEditorKit;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.net.http.HttpResponse;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.net.*;
 
-public class Server extends JFrame implements ActionListener {
+public class Server implements ActionListener {
 
+    static JFrame f = new JFrame();
     public static JTextField t1 ;
     public static JPanel p2;
-    Box vertical = Box.createVerticalBox();
-            Server ()
+    static Box vertical = Box.createVerticalBox();
+
+    public static DataOutputStream dataout;
+    Server ()
     {
-        this.setLayout(null);
+        f.setLayout(null);
 
         JPanel p1 = new JPanel();
         p1.setBackground(new Color(7,94,84));
         p1.setBounds(0,0,320,50);//Setting up the Panel Location based on the Frame Size
         p1.setLayout(null);
-        add(p1);
+        f.add(p1);
 
         ImageIcon i1 = new ImageIcon(ClassLoader.getSystemResource("Icon/left-arrow.png"));
         Image i2 = i1.getImage().getScaledInstance(20,20,Image.SCALE_DEFAULT);
@@ -72,11 +82,12 @@ public class Server extends JFrame implements ActionListener {
         p2 = new JPanel();
         p2.setBounds(5,55,295,420);
         p2.setBackground(new Color(80,141,78));
-        this.add(p2);
+        p2.setLayout(new BorderLayout());
+        f.add(p2);
 
         t1 =new JTextField();
         t1.setBounds(5,480,260,30);
-        add(t1);
+        f.add(t1);
         t1.setFont(new Font("SAN_SERIF",Font.ROMAN_BASELINE,15));
 
 
@@ -86,7 +97,7 @@ public class Server extends JFrame implements ActionListener {
         JButton b1 = new JButton(n3);
         b1.setBounds(270,480,30,30);
         b1.addActionListener(this);
-        add(b1);
+        f.add(b1);
 
 
         back.addMouseListener(new MouseAdapter() {
@@ -96,55 +107,99 @@ public class Server extends JFrame implements ActionListener {
             }
         });
 
-        this.setLocation(100,100);
-        this.setSize(320,550);
-        this.setVisible(true);
-        this.setResizable(false);
-        this.getContentPane().setBackground(new Color(214, 239, 216));
+        f.setLocation(100,100);
+        f.setSize(320,550);
+        f.setVisible(true);
+        f.setResizable(false);
+        f.getContentPane().setBackground(new Color(214, 239, 216));
         //Adding the AWT package
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
     }
     public static void main(String[] args) {
         new Server();
+        try {
+            ServerSocket skt = new ServerSocket(6000);
+            while (true) {
+                Socket s = skt.accept();
+                DataInputStream datain = new DataInputStream(s.getInputStream());
+                dataout = new DataOutputStream(s.getOutputStream());
+
+                while (true) {
+                    String msg = datain.readUTF();
+                    JPanel panel = formateLabel(msg);
+
+                    JPanel left = new JPanel(new BorderLayout());
+                    left.add(panel, BorderLayout.LINE_START);
+                    vertical.add(left);
+                    vertical.add(Box.createVerticalStrut(15));
+
+                    SwingUtilities.invokeLater(() -> {
+                        p2.add(vertical, BorderLayout.PAGE_START);
+                        f.revalidate();
+                        f.repaint();
+                    });
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     @Override
     public void actionPerformed(ActionEvent e) {
 
+               try { if(t1.getText().isEmpty()){}
+                else {
                 String out = t1.getText();
                 JPanel panel;
-                if(t1.getText()!=null) {
-                    panel = formateLabel(out);
+                panel = formateLabel(out);
+                //panel.setBackground(new Color(80,141,78));
 
 
-                    p2.setLayout(new BorderLayout());
-
-                    JPanel right = new JPanel(new BorderLayout());
-                    right.add(panel, BorderLayout.LINE_END);
+                JPanel right = new JPanel(new BorderLayout());
+                right.setBackground(new Color(80,141,78));
+                right.add(panel, BorderLayout.LINE_END);
 
                 vertical.add(right);
                 vertical.add(Box.createVerticalStrut(15));
 
-                p2.add(vertical, BorderLayout.PAGE_START);}
-                repaint();
-                invalidate();
-                validate();
+                p2.add(vertical, BorderLayout.PAGE_START);
+
+                dataout.writeUTF(out);
+                t1.setText("");
+                f.repaint();
+                f.revalidate();
+                }}
+               catch (Exception f)
+               {
+                   f.printStackTrace();
+               }
 
     }
 
     public static JPanel formateLabel  (String out )
     {
         JPanel panel = new JPanel();
-        if(t1.getText()!=null)
-        {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(new Color(11,11,11));
-        JLabel output = new JLabel(out);
+        //panel.setBackground(new Color(11,11,11));
+        JLabel output = new JLabel("<html> <p style=\"width:100px\">" +out+ " </html>" );
         output.setFont(new Font("Tahoma",Font.PLAIN,15));
+        //output.setBorder(new EmptyBorder(0,0,5,0));
+        output.setMaximumSize(new Dimension(200, Integer.MAX_VALUE));
         panel.add(output);
         t1.setText("");
-        }
+
+
+        Calendar clca = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("hh:mm");
+        JLabel time = new JLabel(sdf.format(clca.getTime()));
+
+        panel.add(time);
+
+
         return panel;
+
     }
 }
